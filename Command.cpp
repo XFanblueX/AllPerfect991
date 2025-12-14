@@ -1,5 +1,6 @@
 #include "Command.hpp"
 #include "ReadStorage.hpp"
+#include "Key.hpp"
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -47,11 +48,6 @@ Option options[] = {
   { "KEYDELAY", &keyDelay }
 };
 
-const int commandCount = sizeof(commands) / sizeof(Command);
-const int optionCount = sizeof(options) / sizeof(Option);
-
-extern void keyStroke(byte keyValue);
-
 void processCommand(String fullCommand) {
   fullCommand.trim();
   Serial.print("> ");
@@ -71,7 +67,7 @@ void processCommand(String fullCommand) {
 
   // 查找并执行命令
   bool found = false;
-  for (int i = 0; i < commandCount; i++) {
+  for (int i = 0; i < sizeof(commands) / sizeof(Command); i++) {
     if (cmdName.equals(commands[i].name)) {
       commands[i].func(params);
       found = true;
@@ -133,7 +129,7 @@ void cmdSet(String params) {
   opt.toUpperCase();
   bool found = false;
 
-  for (int i = 0; i < optionCount; i++) {
+  for (int i = 0; i < sizeof(options) / sizeof(Option); i++) {
     if (opt.equals(options[i].name)) {
       *options[i].option = valueSet;
       DEBUG_PRINTLN(value);
@@ -152,7 +148,7 @@ void cmdSet(String params) {
 void cmdGet(String params) {
   params.toUpperCase();
 
-  for (int i = 0; i < optionCount; i++) {
+  for (int i = 0; i < sizeof(options) / sizeof(Option); i++) {
     if (params.equals(options[i].name)) {
       Serial.println(*options[i].option);
       break;
@@ -174,8 +170,8 @@ void cmdRun(String params) {
   for (int addr = beginAddr; addr <= endAddr; addr++){
     DEBUG_PRINT(addr,HEX);
     DEBUG_PRINT(":");
-    DEBUG_PRINTLN(readROM(deviceAddress, addr), HEX);
-    keyStroke(readROM(deviceAddress, addr));
+    DEBUG_PRINTLN(readStorage(deviceAddress, addr), HEX);
+    keyStroke(readStorage(deviceAddress, addr));
     Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr))*100, 2);
     Serial.println("%");
   }

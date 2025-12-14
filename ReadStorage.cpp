@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "ReadStorage.hpp"
 
-byte readROM(byte deviceAddr, unsigned int memAddr) {
+byte readStorage(byte deviceAddr, unsigned int memAddr) {
   byte data = 0xFF;
 
   Wire.beginTransmission(deviceAddr);
