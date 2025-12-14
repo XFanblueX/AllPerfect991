@@ -11,7 +11,6 @@ extern const int enablePin;
 extern int keyTime;
 extern int keyDelay;
 
-extern const byte keyList[];
 void keyStroke(byte keyValue);
 
 #endif

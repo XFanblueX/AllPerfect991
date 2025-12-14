@@ -14,16 +14,6 @@
 #define DEBUG_PRINTLN(...)
 #endif
 
-extern const int dataPin;
-extern const int clkPin;
-extern const int latchPin;
-extern const int enablePin;
-extern const int deviceAddress;
-
-extern const byte keyList[];
-
-const int keyListSize = 45;
-
 struct Command {
   const char* name;
   void (*func)(String);
@@ -40,7 +30,8 @@ Command commands[] = {
   { "KEY", cmdKey },
   { "SET", cmdSet },
   { "GET", cmdGet },
-  { "RUN", cmdRun }
+  { "RUN", cmdRun },
+  { "CHECK", cmdCheck }
 };
 
 Option options[] = {
@@ -167,13 +158,61 @@ void cmdRun(String params) {
     return;
   }
 
-  for (int addr = beginAddr; addr <= endAddr; addr++){
-    DEBUG_PRINT(addr,HEX);
+  for (int addr = beginAddr; addr <= endAddr; addr++) {
+    DEBUG_PRINT(addr, HEX);
     DEBUG_PRINT(":");
     DEBUG_PRINTLN(readStorage(deviceAddress, addr), HEX);
     keyStroke(readStorage(deviceAddress, addr));
-    Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr))*100, 2);
+    Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
     Serial.println("%");
   }
   Serial.println("OK");
+}
+
+void cmdCheck(String params) {
+  unsigned int beginAddr, endAddr;
+  int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
+
+  if (count != 2 || beginAddr > endAddr) {
+    Serial.println("Invalid address");
+    return;
+  }
+
+  bool allValid = true;
+  for (unsigned int addr = beginAddr; addr <= endAddr; addr++) {
+
+    digitalWrite(LED_BUILTIN, HIGH);
+
+    byte value = readStorage(deviceAddress, addr);
+
+    Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
+    Serial.println("%");
+
+    bool isValid = false;
+    for (int i = 0; i < keyListSize; i++) {
+      DEBUG_PRINT(value, HEX);
+      DEBUG_PRINT(" ");
+      DEBUG_PRINT(keyList[i], HEX);
+      DEBUG_PRINTLN();
+      if (value == keyList[i]) {
+        isValid = true;
+        break;
+      }
+    }
+
+    digitalWrite(LED_BUILTIN, LOW);
+
+    if (!isValid) {
+      Serial.print("Invalid key value found at ");
+      Serial.println(addr, HEX);
+      Serial.print("Value: ");
+      Serial.println(value, HEX);
+      allValid = false;
+      break;
+    }
+  }
+
+  if (allValid) {
+    Serial.println("OK");
+  }
 }
