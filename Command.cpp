@@ -1,8 +1,5 @@
 #include "Command.hpp"
-#include "ReadStorage.hpp"
 #include "Key.hpp"
-#include <Arduino.h>
-#include <Wire.h>
 
 #define DEBUG 0
 
@@ -147,72 +144,74 @@ void cmdGet(String params) {
   }
 }
 
-void cmdRun(String params) {
-  unsigned int beginAddr, endAddr;
-  int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
-  DEBUG_PRINTLN(count);
-  DEBUG_PRINTLN(beginAddr, HEX);
-  DEBUG_PRINTLN(endAddr, HEX);
-  if (count != 2 || beginAddr > endAddr) {
-    Serial.println("Invalid address");
-    return;
-  }
+// Deprecated code for I2C EEPROM
 
-  for (int addr = beginAddr; addr <= endAddr; addr++) {
-    DEBUG_PRINT(addr, HEX);
-    DEBUG_PRINT(":");
-    DEBUG_PRINTLN(readStorage(deviceAddress, addr), HEX);
-    keyStroke(readStorage(deviceAddress, addr));
-    Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
-    Serial.println("%");
-  }
-  Serial.println("OK");
-}
+// void cmdRun(String params) {
+//   unsigned int beginAddr, endAddr;
+//   int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
+//   DEBUG_PRINTLN(count);
+//   DEBUG_PRINTLN(beginAddr, HEX);
+//   DEBUG_PRINTLN(endAddr, HEX);
+//   if (count != 2 || beginAddr > endAddr) {
+//     Serial.println("Invalid address");
+//     return;
+//   }
 
-void cmdCheck(String params) {
-  unsigned int beginAddr, endAddr;
-  int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
+//   for (int addr = beginAddr; addr <= endAddr; addr++) {
+//     DEBUG_PRINT(addr, HEX);
+//     DEBUG_PRINT(":");
+//     DEBUG_PRINTLN(readStorage(deviceAddress, addr), HEX);
+//     keyStroke(readStorage(deviceAddress, addr));
+//     Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
+//     Serial.println("%");
+//   }
+//   Serial.println("OK");
+// }
 
-  if (count != 2 || beginAddr > endAddr) {
-    Serial.println("Invalid address");
-    return;
-  }
+// void cmdCheck(String params) {
+//   unsigned int beginAddr, endAddr;
+//   int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
 
-  bool allValid = true;
-  for (unsigned int addr = beginAddr; addr <= endAddr; addr++) {
+//   if (count != 2 || beginAddr > endAddr) {
+//     Serial.println("Invalid address");
+//     return;
+//   }
 
-    digitalWrite(LED_BUILTIN, HIGH);
+//   bool allValid = true;
+//   for (unsigned int addr = beginAddr; addr <= endAddr; addr++) {
 
-    byte value = readStorage(deviceAddress, addr);
+//     digitalWrite(LED_BUILTIN, HIGH);
 
-    Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
-    Serial.println("%");
+//     byte value = readStorage(deviceAddress, addr);
 
-    bool isValid = false;
-    for (int i = 0; i < keyListSize; i++) {
-      DEBUG_PRINT(value, HEX);
-      DEBUG_PRINT(" ");
-      DEBUG_PRINT(keyList[i], HEX);
-      DEBUG_PRINTLN();
-      if (value == keyList[i]) {
-        isValid = true;
-        break;
-      }
-    }
+//     Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
+//     Serial.println("%");
 
-    digitalWrite(LED_BUILTIN, LOW);
+//     bool isValid = false;
+//     for (int i = 0; i < keyListSize; i++) {
+//       DEBUG_PRINT(value, HEX);
+//       DEBUG_PRINT(" ");
+//       DEBUG_PRINT(keyList[i], HEX);
+//       DEBUG_PRINTLN();
+//       if (value == keyList[i]) {
+//         isValid = true;
+//         break;
+//       }
+//     }
 
-    if (!isValid) {
-      Serial.print("Invalid key value found at ");
-      Serial.println(addr, HEX);
-      Serial.print("Value: ");
-      Serial.println(value, HEX);
-      allValid = false;
-      break;
-    }
-  }
+//     digitalWrite(LED_BUILTIN, LOW);
 
-  if (allValid) {
-    Serial.println("OK");
-  }
-}
+//     if (!isValid) {
+//       Serial.print("Invalid key value found at ");
+//       Serial.println(addr, HEX);
+//       Serial.print("Value: ");
+//       Serial.println(value, HEX);
+//       allValid = false;
+//       break;
+//     }
+//   }
+
+//   if (allValid) {
+//     Serial.println("OK");
+//   }
+// }
