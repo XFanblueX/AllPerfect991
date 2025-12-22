@@ -4,7 +4,7 @@
 #include "CalcKeyboard.hpp"
 #include "CommandProcessor.hpp"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
