@@ -1,9 +1,12 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include "Command.hpp"
-#include "Key.hpp"
+// #include "Command.hpp"
+// #include "Key.hpp"
 
-#define DEBUG 0
+#include "CalcKeyboard.hpp"
+#include "CommandProcessor.hpp"
+
+#define DEBUG 1
 
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
@@ -41,18 +44,17 @@ const byte keyList[]{
   0x64, 0x63, 0x62, 0x61, 0x60
 };
 
+
 const int keyListSize = sizeof(keyList) / sizeof(keyList[0]);
+
+CalcKeyboard keyboard(dataPin, clkPin, latchPin, enablePin);
+CommandProcessor commandProcessor(keyboard);
+
+
 
 
 void setup() {
-  pinMode(dataPin, OUTPUT);
-  pinMode(clkPin, OUTPUT);
-  pinMode(latchPin, OUTPUT);
-  pinMode(enablePin, OUTPUT);
   pinMode(LED_BUILTIN, OUTPUT);
-
-  digitalWrite(enablePin, HIGH);
-  digitalWrite(latchPin, LOW);
 
   Serial.begin(9600);
   Wire.begin();
@@ -72,7 +74,9 @@ void loop() {
   }
 
   if (commandReady) {
-    processCommand(inputBuffer);
+    // processCommand(inputBuffer);
+    // DEBUG_PRINTLN(inputBuffer);
+    commandProcessor.processCommand(inputBuffer);
     inputBuffer = "";
     commandReady = false;
   }

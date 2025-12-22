@@ -1,6 +1,6 @@
-#include "Command.hpp"
+#include "CommandProcessor.hpp"
 #include "ReadStorage.hpp"
-#include "Key.hpp"
+#include "CalcKeyboard.hpp"
 #include <Arduino.h>
 #include <Wire.h>
 
@@ -9,38 +9,35 @@
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
 #define DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
+#define DEBUG_PRINTF(...) Serial.printf(__VA_ARGS__)
 #else
 #define DEBUG_PRINT(...)
 #define DEBUG_PRINTLN(...)
+#define DEBUG_PRINTF(...)
 #endif
 
-struct Command {
-  const char* name;
-  void (*func)(String);
-};
+CommandProcessor::CommandProcessor(CalcKeyboard &kb) : keyboard(kb) {
 
-struct Option {
-  const char* name;
-  int* option;
-};
+    commandCount = 7;
+    commands = new Command[commandCount] {
+        { "ISUP", &CommandProcessor::cmdIsUp },
+        { "DIAG", &CommandProcessor::cmdDiag },
+        { "KEY", &CommandProcessor::cmdKey },
+        { "SET", &CommandProcessor::cmdSet },
+        { "GET", &CommandProcessor::cmdGet },
+        { "RUN", &CommandProcessor::cmdRun },
+        { "CHECK", &CommandProcessor::cmdCheck }
+    };
+    Serial.begin(9600);
+}
 
-Command commands[] = {
-  { "ISUP", cmdIsUp },
-  { "DIAG", cmdDiag },
-  { "KEY", cmdKey },
-  { "SET", cmdSet },
-  { "GET", cmdGet },
-  { "RUN", cmdRun },
-  { "CHECK", cmdCheck }
-};
+CommandProcessor::~CommandProcessor() {
+  delete[] commands;
+}
 
-Option options[] = {
-  { "KEYTIME", &keyTime },
-  { "KEYDELAY", &keyDelay }
-};
-
-void processCommand(String fullCommand) {
+void CommandProcessor::processCommand(String fullCommand) {
   fullCommand.trim();
+  DEBUG_PRINTLN("Starting command processor...");
   Serial.print("> ");
   Serial.println(fullCommand);
 
@@ -56,11 +53,16 @@ void processCommand(String fullCommand) {
 
   cmdName.toUpperCase();
 
+  DEBUG_PRINTLN(cmdName);
+
   // 查找并执行命令
   bool found = false;
-  for (int i = 0; i < sizeof(commands) / sizeof(Command); i++) {
+
+  for (int i = 0; i < commandCount; i++) {
+    DEBUG_PRINT(i);
+    DEBUG_PRINTLN(commands[i].name);
     if (cmdName.equals(commands[i].name)) {
-      commands[i].func(params);
+      (this->*commands[i].func)(params);
       found = true;
       break;
     }
@@ -71,19 +73,17 @@ void processCommand(String fullCommand) {
   }
 }
 
-void cmdIsUp(String params) {
+void CommandProcessor::cmdIsUp(String params) {
   Serial.println("OK");
 }
 
-void cmdDiag(String params) {
+void CommandProcessor::cmdDiag(String params) {
   Serial.print("Running diagnostic...");
-  for (int i = 0; i < keyListSize; i++) {
-    keyStroke(keyList[i]);
-  }
+  keyboard.runDiag();
   Serial.println("OK");
 }
 
-void cmdKey(String params) {
+void CommandProcessor::cmdKey(String params) {
   unsigned int keyValue;
   int count = sscanf(params.c_str(), "%x", &keyValue);
 
@@ -96,7 +96,7 @@ void cmdKey(String params) {
   }
 
   if (valid) {
-    keyStroke(keyValue);
+    keyboard.press(keyValue);
     Serial.println("OK");
   } else {
     Serial.println("Invalid key value");
@@ -104,7 +104,7 @@ void cmdKey(String params) {
   }
 }
 
-void cmdSet(String params) {
+void CommandProcessor::cmdSet(String params) {
   int spaceIndex = params.indexOf(' ');
 
   if (spaceIndex <= 0) {
@@ -117,37 +117,20 @@ void cmdSet(String params) {
 
   int valueSet = value.toInt();
 
-  opt.toUpperCase();
-  bool found = false;
-
-  for (int i = 0; i < sizeof(options) / sizeof(Option); i++) {
-    if (opt.equals(options[i].name)) {
-      *options[i].option = valueSet;
-      DEBUG_PRINTLN(value);
-      DEBUG_PRINTLN(valueSet);
-      DEBUG_PRINT(options[i].name);
-      found = true;
-      break;
-    }
-  }
-
-  if (!found) {
+  if (keyboard.setOption(opt, valueSet)) {
+    Serial.println("OK");
+  } else {
     Serial.println("Invalid option");
   }
 }
 
-void cmdGet(String params) {
+void CommandProcessor::cmdGet(String params) {
   params.toUpperCase();
 
-  for (int i = 0; i < sizeof(options) / sizeof(Option); i++) {
-    if (params.equals(options[i].name)) {
-      Serial.println(*options[i].option);
-      break;
-    }
-  }
+  Serial.println(keyboard.getOption(params));
 }
 
-void cmdRun(String params) {
+void CommandProcessor::cmdRun(String params) {
   unsigned int beginAddr, endAddr;
   int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
   DEBUG_PRINTLN(count);
@@ -162,14 +145,14 @@ void cmdRun(String params) {
     DEBUG_PRINT(addr, HEX);
     DEBUG_PRINT(":");
     DEBUG_PRINTLN(readStorage(deviceAddress, addr), HEX);
-    keyStroke(readStorage(deviceAddress, addr));
+    keyboard.press(readStorage(deviceAddress, addr));
     Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
     Serial.println("%");
   }
   Serial.println("OK");
 }
 
-void cmdCheck(String params) {
+void CommandProcessor::cmdCheck(String params) {
   unsigned int beginAddr, endAddr;
   int count = sscanf(params.c_str(), "%x %x", &beginAddr, &endAddr);
 
@@ -188,21 +171,9 @@ void cmdCheck(String params) {
     Serial.print(((float)(addr - beginAddr) / (float)(endAddr - beginAddr)) * 100, 2);
     Serial.println("%");
 
-    bool isValid = false;
-    for (int i = 0; i < keyListSize; i++) {
-      DEBUG_PRINT(value, HEX);
-      DEBUG_PRINT(" ");
-      DEBUG_PRINT(keyList[i], HEX);
-      DEBUG_PRINTLN();
-      if (value == keyList[i]) {
-        isValid = true;
-        break;
-      }
-    }
-
     digitalWrite(LED_BUILTIN, LOW);
 
-    if (!isValid) {
+    if (!keyboard.checkKeyValue(value)) {
       Serial.print("Invalid key value found at ");
       Serial.println(addr, HEX);
       Serial.print("Value: ");
@@ -212,7 +183,17 @@ void cmdCheck(String params) {
     }
   }
 
-  if (allValid) {
-    Serial.println("OK");
-  }
+  //   if (!isValid) {
+  //     Serial.print("Invalid key value found at ");
+  //     Serial.println(addr, HEX);
+  //     Serial.print("Value: ");
+  //     Serial.println(value, HEX);
+  //     allValid = false;
+  //     break;
+  //   }
+  // }
+
+  // if (allValid) {
+  Serial.println("OK");
+  // }
 }
