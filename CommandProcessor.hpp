@@ -3,8 +3,7 @@
 
 #include "CalcKeyboard.hpp"
 #include <Arduino.h>
-
-extern const int deviceAddress;
+#include <SD.h>
 
 class CommandProcessor {
 public:
@@ -19,13 +18,17 @@ private:
     };
 
     CalcKeyboard &keyboard;
+    File file;
     void cmdIsUp(String params);
     void cmdDiag(String params);
     void cmdKey(String params);
     void cmdSet(String params);
     void cmdGet(String params);
-    void cmdRun(String params);
+    void cmdOpen(String params);
+    void cmdSize(String params);
     void cmdCheck(String params);
+    void cmdRun(String params);
+    void cmdClose(String params);
 
     int commandCount;
     Command *commands;

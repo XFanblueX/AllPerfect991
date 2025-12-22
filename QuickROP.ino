@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <Wire.h>
-// #include "Command.hpp"
-// #include "Key.hpp"
 
 #include "CalcKeyboard.hpp"
 #include "CommandProcessor.hpp"
@@ -50,14 +48,9 @@ const int keyListSize = sizeof(keyList) / sizeof(keyList[0]);
 CalcKeyboard keyboard(dataPin, clkPin, latchPin, enablePin);
 CommandProcessor commandProcessor(keyboard);
 
-
-
-
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-
   Serial.begin(9600);
-  Wire.begin();
 }
 
 void loop() {
